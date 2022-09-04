@@ -7,7 +7,6 @@
     "clean": "rimraf ./dist",
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "npm run build",
-    "postpublish": "npm run clean",
     "test": "npm run build"
   },
   "author": "Sarisia <sarisiaice@gmail.com>",
