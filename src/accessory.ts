@@ -55,11 +55,13 @@ class DaikinAirPurifier implements AccessoryPlugin {
   private readonly informationService: Service;
   private readonly airPurifierService: Service;
   private readonly temperatureSensorService: Service;
+  private readonly humidifierService: Service;
 
   private state: State = {
     updated_at: 0,
     controlInfo: {
-      power: false
+      power: false,
+      humidifier: false
     },
     sensorInfo: {
       temperature: 0,
@@ -117,6 +119,29 @@ class DaikinAirPurifier implements AccessoryPlugin {
     this.temperatureSensorService.getCharacteristic(hap.Characteristic.CurrentTemperature)
       .onGet(async () => { return this.getCurrentTemperature() })
 
+    this.humidifierService = new hap.Service.HumidifierDehumidifier();
+    this.humidifierService.getCharacteristic(hap.Characteristic.Active)
+      .onGet(async () => { return this.getActive() })
+      .onSet(async (value) => {
+        this.log.info(`Active => ${value}`)
+        await this.client.setControlInfo({
+          power: value === hap.Characteristic.Active.ACTIVE
+        });
+        this.updateState();
+      })
+    this.humidifierService.getCharacteristic(hap.Characteristic.CurrentRelativeHumidity)
+      .onGet(async () => {
+        return this.getCurrentHumidity()
+      })
+    this.humidifierService.getCharacteristic(hap.Characteristic.TargetHumidifierDehumidifierState)
+      .onGet(async () => { return this.getTargetHumidifierState() })
+      .onSet(async (value) => { })
+    this.humidifierService.getCharacteristic(hap.Characteristic.CurrentHumidifierDehumidifierState)
+      .onGet(async () => {
+        return this.getCurrentHumidifierState()
+      })
+
+
     this.updateState();
 
     log.info("Init done!");
@@ -138,7 +163,8 @@ class DaikinAirPurifier implements AccessoryPlugin {
     return [
       this.informationService,
       this.airPurifierService,
-      this.temperatureSensorService
+      this.temperatureSensorService,
+      this.humidifierService
     ];
   }
 
@@ -159,6 +185,19 @@ class DaikinAirPurifier implements AccessoryPlugin {
     return this.state.sensorInfo.temperature
   }
 
+  getCurrentHumidity() {
+    return this.state.sensorInfo.humidity
+  }
+
+  getTargetHumidifierState() {
+    return hap.Characteristic.TargetHumidifierDehumidifierState.HUMIDIFIER
+  }
+
+  getCurrentHumidifierState() {
+    return this.state.controlInfo.humidifier ? hap.Characteristic.CurrentHumidifierDehumidifierState.HUMIDIFYING
+      : hap.Characteristic.CurrentHumidifierDehumidifierState.INACTIVE;
+  }
+
   async updateState() {
     const ctrlInfo = await this.client.getControlInfo();
     const sensorInfo = await this.client.getSensorInfo();
@@ -168,14 +207,29 @@ class DaikinAirPurifier implements AccessoryPlugin {
       sensorInfo: sensorInfo
     }
 
+    // no updates for information service
+
+    // air purifier
     this.airPurifierService.getCharacteristic(hap.Characteristic.CurrentAirPurifierState)
       .updateValue(this.getCurrentAirPurifierState())
     this.airPurifierService.getCharacteristic(hap.Characteristic.Active)
       .updateValue(this.getActive())
     this.airPurifierService.getCharacteristic(hap.Characteristic.TargetAirPurifierState)
       .updateValue(this.getTargetAirPurifierState())
+
+    // temperature sensor
     this.temperatureSensorService.getCharacteristic(hap.Characteristic.CurrentTemperature)
       .updateValue(this.getCurrentTemperature())
+
+    // humidifier
+    this.humidifierService.getCharacteristic(hap.Characteristic.Active)
+      .updateValue(this.getActive())
+    this.humidifierService.getCharacteristic(hap.Characteristic.CurrentRelativeHumidity)
+      .updateValue(this.getCurrentHumidity())
+    this.humidifierService.getCharacteristic(hap.Characteristic.TargetHumidifierDehumidifierState)
+      .updateValue(this.getTargetHumidifierState())
+    this.humidifierService.getCharacteristic(hap.Characteristic.CurrentHumidifierDehumidifierState)
+      .updateValue(this.getCurrentHumidifierState())
   }
 
 }

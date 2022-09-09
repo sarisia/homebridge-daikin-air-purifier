@@ -39,8 +39,24 @@ export class DeviceClient {
                 throw new Error(`Unknown value for pow: ${resp.pow}`)
         }
 
+        let humidifier: boolean;
+        switch (resp.humd) {
+            case "0":
+                humidifier = false;
+                break;
+            case "1":
+            case "2":
+            case "3":
+            case "4":
+                humidifier = true;
+                break;
+            default:
+                throw new Error(`Unknown value for humd: ${resp.humd}`)
+        }
+
         return {
-            power: power
+            power,
+            humidifier
         }
     }
 
