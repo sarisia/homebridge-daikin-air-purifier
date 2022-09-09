@@ -11,6 +11,7 @@ import { DeviceClient } from "./client";
 interface State {
   updated_at: number;
   power: boolean;
+  temperature: number;
 }
 
 /*
@@ -52,10 +53,12 @@ class DaikinAirPurifier implements AccessoryPlugin {
 
   private readonly informationService: Service;
   private readonly airPurifierService: Service;
+  private readonly temperatureSensorService: Service;
 
   private state: State = {
     updated_at: 0,
     power: false,
+    temperature: 0
   };
 
   private readonly client: DeviceClient;
@@ -104,6 +107,10 @@ class DaikinAirPurifier implements AccessoryPlugin {
       this.updateState()
     }, 10000);
 
+    this.temperatureSensorService = new hap.Service.TemperatureSensor();
+    this.temperatureSensorService.getCharacteristic(hap.Characteristic.CurrentTemperature)
+      .onGet(async () => { return this.getCurrentTemperature() })
+
     this.updateState();
 
     log.info("Init done!");
@@ -125,6 +132,7 @@ class DaikinAirPurifier implements AccessoryPlugin {
     return [
       this.informationService,
       this.airPurifierService,
+      this.temperatureSensorService
     ];
   }
 
@@ -141,11 +149,17 @@ class DaikinAirPurifier implements AccessoryPlugin {
     return hap.Characteristic.TargetAirPurifierState.AUTO;
   }
 
+  getCurrentTemperature() {
+    return this.state.temperature
+  }
+
   async updateState() {
     const info = await this.client.getControlInfo();
+    const sensorInfo = await this.client.getSensorInfo();
     this.state = {
       updated_at: Date.now(),
-      power: info.power
+      power: info.power,
+      temperature: sensorInfo.temperature
     }
 
     this.airPurifierService.getCharacteristic(hap.Characteristic.CurrentAirPurifierState)
@@ -154,6 +168,8 @@ class DaikinAirPurifier implements AccessoryPlugin {
       .updateValue(this.getActive())
     this.airPurifierService.getCharacteristic(hap.Characteristic.TargetAirPurifierState)
       .updateValue(this.getTargetAirPurifierState())
+    this.temperatureSensorService.getCharacteristic(hap.Characteristic.CurrentTemperature)
+      .updateValue(this.getCurrentTemperature())
   }
 
 }

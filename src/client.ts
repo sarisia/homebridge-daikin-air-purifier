@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Logging } from "homebridge";
 import { SetControlInfoOptions } from "./request";
-import { GetControlInfoResponse } from "./response";
+import { GetControlInfoResponse, GetSensorInfoResponse } from "./response";
 
 export class DeviceClient {
     private readonly log: Logging;
@@ -12,8 +12,20 @@ export class DeviceClient {
         this.ip_address = ip_address;
     }
 
+    async getSensorInfo(): Promise<GetSensorInfoResponse> {
+        const resp = await this.callDevice("/cleaner/get_sensor_info")
+
+        const temp = parseFloat(resp.htemp)
+        const humd = parseFloat(resp.hhum)
+
+        return {
+            temperature: temp,
+            humidity: humd
+        }
+    }
+
     async getControlInfo(): Promise<GetControlInfoResponse> {
-        const resp = await this.callDevice("/cleaner/get_control_info", {})
+        const resp = await this.callDevice("/cleaner/get_control_info")
 
         let power: boolean;
         switch (resp.pow) {
@@ -38,7 +50,7 @@ export class DeviceClient {
         })
     }
 
-    async callDevice(path: string, args: { [k: string]: string }): Promise<{ [k: string]: string }> {
+    async callDevice(path: string, args: { [k: string]: string } = {}): Promise<{ [k: string]: string }> {
         const url = new URL(path, `http://${this.ip_address}`);
         this.log.debug(`GET ${url.toString()}`)
         this.log.debug(`args: ${JSON.stringify(args)}`)
