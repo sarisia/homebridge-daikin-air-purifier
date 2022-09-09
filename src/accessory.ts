@@ -7,11 +7,12 @@ import {
   Service
 } from "homebridge";
 import { DeviceClient } from "./client";
+import { GetControlInfoResponse, GetSensorInfoResponse } from "./response";
 
 interface State {
   updated_at: number;
-  power: boolean;
-  temperature: number;
+  controlInfo: GetControlInfoResponse,
+  sensorInfo: GetSensorInfoResponse
 }
 
 /*
@@ -57,8 +58,13 @@ class DaikinAirPurifier implements AccessoryPlugin {
 
   private state: State = {
     updated_at: 0,
-    power: false,
-    temperature: 0
+    controlInfo: {
+      power: false
+    },
+    sensorInfo: {
+      temperature: 0,
+      humidity: 0
+    }
   };
 
   private readonly client: DeviceClient;
@@ -137,12 +143,12 @@ class DaikinAirPurifier implements AccessoryPlugin {
   }
 
   getCurrentAirPurifierState() {
-    return this.state.power ? hap.Characteristic.CurrentAirPurifierState.PURIFYING_AIR
+    return this.state.controlInfo.power ? hap.Characteristic.CurrentAirPurifierState.PURIFYING_AIR
       : hap.Characteristic.CurrentAirPurifierState.INACTIVE;
   }
 
   getActive() {
-    return this.state.power ? hap.Characteristic.Active.ACTIVE : hap.Characteristic.Active.INACTIVE;
+    return this.state.controlInfo.power ? hap.Characteristic.Active.ACTIVE : hap.Characteristic.Active.INACTIVE;
   }
 
   getTargetAirPurifierState() {
@@ -150,16 +156,16 @@ class DaikinAirPurifier implements AccessoryPlugin {
   }
 
   getCurrentTemperature() {
-    return this.state.temperature
+    return this.state.sensorInfo.temperature
   }
 
   async updateState() {
-    const info = await this.client.getControlInfo();
+    const ctrlInfo = await this.client.getControlInfo();
     const sensorInfo = await this.client.getSensorInfo();
     this.state = {
       updated_at: Date.now(),
-      power: info.power,
-      temperature: sensorInfo.temperature
+      controlInfo: ctrlInfo,
+      sensorInfo: sensorInfo
     }
 
     this.airPurifierService.getCharacteristic(hap.Characteristic.CurrentAirPurifierState)
