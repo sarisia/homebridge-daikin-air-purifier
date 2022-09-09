@@ -1,6 +1,6 @@
 {
   "name": "@sarisia/homebridge-daikin-air-purifier",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Control Daikin Air Purifier using local HTTP API",
   "main": "dist/accessory.js",
   "scripts": {
